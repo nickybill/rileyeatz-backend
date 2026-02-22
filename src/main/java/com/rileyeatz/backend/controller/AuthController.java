@@ -50,13 +50,12 @@ public class AuthController {
     }
 
     // ================= LOGIN =================
+    // ================= LOGIN =================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
 
-
         System.out.println("EMAIL RECEIVED: " + request.getEmail());
         System.out.println("PASSWORD RECEIVED: " + request.getPassword());
-
 
         Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
 
@@ -66,14 +65,13 @@ public class AuthController {
 
         User user = userOptional.get();
 
-        // 🔐 Check encrypted password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             return ResponseEntity.badRequest().body("Invalid email or password");
         }
 
-        // 🔑 Generate JWT token
         String token = jwtUtil.generateToken(user.getEmail());
 
-        return ResponseEntity.ok(token);
+        // 🔥 RETURN JSON INSTEAD OF STRING
+        return ResponseEntity.ok(new LoginResponse(token));
     }
 }
