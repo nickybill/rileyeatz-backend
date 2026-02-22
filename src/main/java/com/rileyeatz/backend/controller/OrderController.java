@@ -23,6 +23,12 @@ public class OrderController {
         this.userRepository = userRepository;
     }
 
+    // ✅ GET ALL ORDERS (Admin or General Use)
+    @GetMapping
+    public List<Order> getAllOrders() {
+        return orderRepository.findAll();
+    }
+
     // ✅ CHECKOUT
     @PostMapping("/checkout")
     public Order checkout(Authentication authentication) {
