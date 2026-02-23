@@ -2,8 +2,9 @@ package com.rileyeatz.backend.controller;
 
 import com.rileyeatz.backend.model.*;
 import com.rileyeatz.backend.repository.*;
-import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,20 +27,22 @@ public class CartController {
         this.menuItemRepository = menuItemRepository;
     }
 
-    // ➕ Add to Cart (JWT secured)
+    // ➕ Add to Cart
     @PostMapping("/{menuItemId}")
     public ResponseEntity<?> addToCart(@PathVariable Long menuItemId,
                                        @RequestParam int quantity,
-                                       HttpServletRequest request) {
+                                       Authentication authentication) {
 
-        String email = (String) request.getAttribute("email");
-
-        if (email == null) {
+        if (authentication == null) {
             return ResponseEntity.status(401).body("Unauthorized");
         }
 
-        User user = userRepository.findByEmail(email).orElseThrow();
-        MenuItem menuItem = menuItemRepository.findById(menuItemId).orElseThrow();
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        MenuItem menuItem = menuItemRepository.findById(menuItemId)
+                .orElseThrow(() -> new RuntimeException("Menu item not found"));
 
         Optional<CartItem> existing =
                 cartItemRepository.findByUserIdAndMenuItemId(user.getId(), menuItemId);
@@ -61,17 +64,17 @@ public class CartController {
         return ResponseEntity.ok("Item added to cart");
     }
 
-    // 📥 Get Cart (JWT secured)
+    // 📥 Get Cart
     @GetMapping
-    public ResponseEntity<?> getCart(HttpServletRequest request) {
+    public ResponseEntity<?> getCart(Authentication authentication) {
 
-        String email = (String) request.getAttribute("email");
-
-        if (email == null) {
+        if (authentication == null) {
             return ResponseEntity.status(401).body("Unauthorized");
         }
 
-        User user = userRepository.findByEmail(email).orElseThrow();
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<CartItem> cartItems = cartItemRepository.findByUserId(user.getId());
 
@@ -81,6 +84,11 @@ public class CartController {
     // ❌ Remove item
     @DeleteMapping("/{cartItemId}")
     public ResponseEntity<?> removeItem(@PathVariable Long cartItemId) {
+
+        if (!cartItemRepository.existsById(cartItemId)) {
+            return ResponseEntity.badRequest().body("Cart item not found");
+        }
+
         cartItemRepository.deleteById(cartItemId);
         return ResponseEntity.ok("Item removed from cart");
     }
