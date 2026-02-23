@@ -36,11 +36,13 @@ public class AuthController {
     )
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
 
+        // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
             return ResponseEntity.badRequest()
                     .body(new LoginResponse("Email already exists"));
         }
 
+        // Create new user
         User user = new User();
         user.setName(request.getName());
         user.setEmail(request.getEmail());
@@ -48,7 +50,9 @@ public class AuthController {
 
         userRepository.save(user);
 
-        return ResponseEntity.ok(new LoginResponse("User registered successfully"));
+        return ResponseEntity.ok(
+                new LoginResponse("User registered successfully")
+        );
     }
 
     // ================= LOGIN =================
@@ -59,7 +63,8 @@ public class AuthController {
     )
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
 
-        Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
+        Optional<User> userOptional =
+                userRepository.findByEmail(request.getEmail());
 
         if (userOptional.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -68,11 +73,15 @@ public class AuthController {
 
         User user = userOptional.get();
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(
+                request.getPassword(),
+                user.getPassword())) {
+
             return ResponseEntity.badRequest()
                     .body(new LoginResponse("Invalid email or password"));
         }
 
+        // Generate JWT token using email
         String token = jwtUtil.generateToken(user.getEmail());
 
         return ResponseEntity.ok(new LoginResponse(token));
