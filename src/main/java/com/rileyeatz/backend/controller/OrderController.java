@@ -8,6 +8,7 @@ import com.rileyeatz.backend.repository.CartItemRepository;
 import com.rileyeatz.backend.repository.OrderRepository;
 import com.rileyeatz.backend.repository.UserRepository;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,22 +18,18 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
-@CrossOrigin
 public class OrderController {
 
-    private final UserRepository userRepository;
-    private final CartItemRepository cartItemRepository;
-    private final OrderRepository orderRepository;
+    @Autowired
+    private OrderRepository orderRepository;
 
-    public OrderController(UserRepository userRepository,
-                           CartItemRepository cartItemRepository,
-                           OrderRepository orderRepository) {
-        this.userRepository = userRepository;
-        this.cartItemRepository = cartItemRepository;
-        this.orderRepository = orderRepository;
-    }
+    @Autowired
+    private CartItemRepository cartItemRepository;
 
-    // ✅ CHECKOUT
+    @Autowired
+    private UserRepository userRepository;
+
+    // ✅ CHECKOUT (Create Order from Cart)
     @PostMapping("/checkout")
     public ResponseEntity<?> checkout(
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -41,23 +38,25 @@ public class OrderController {
             return ResponseEntity.status(401).body("Unauthorized");
         }
 
+        // Get logged-in user
         User user = userRepository
                 .findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        List<CartItem> cartItems =
-                cartItemRepository.findByUserId(user.getId());
+        // Get cart items
+        List<CartItem> cartItems = cartItemRepository.findByUser(user);
 
         if (cartItems.isEmpty()) {
             return ResponseEntity.badRequest().body("Cart is empty");
         }
 
+        // Calculate total
         double total = cartItems.stream()
                 .mapToDouble(item ->
-                        item.getMenuItem().getPrice()
-                                * item.getQuantity())
+                        item.getMenuItem().getPrice() * item.getQuantity())
                 .sum();
 
+        // Create new order
         Order order = new Order();
         order.setUser(user);
         order.setTotalAmount(total);
@@ -65,14 +64,15 @@ public class OrderController {
 
         Order savedOrder = orderRepository.save(order);
 
+        // Clear cart
         cartItemRepository.deleteAll(cartItems);
 
         return ResponseEntity.ok(savedOrder);
     }
 
-    // ✅ GET USER ORDERS
+    // ✅ GET ALL ORDERS FOR LOGGED-IN USER
     @GetMapping
-    public ResponseEntity<?> getOrders(
+    public ResponseEntity<?> getUserOrders(
             @AuthenticationPrincipal UserDetails userDetails) {
 
         if (userDetails == null) {
@@ -83,9 +83,22 @@ public class OrderController {
                 .findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 🔥 USE userId VERSION
-        return ResponseEntity.ok(
-                orderRepository.findByUserId(user.getId())
-        );
+        List<Order> orders = orderRepository.findByUser(user);
+
+        return ResponseEntity.ok(orders);
+    }
+
+    // ✅ UPDATE ORDER STATUS (Admin use)
+    @PutMapping("/{orderId}/status")
+    public ResponseEntity<?> updateOrderStatus(
+            @PathVariable Long orderId,
+            @RequestParam OrderStatus status) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        order.setStatus(status);
+
+        return ResponseEntity.ok(orderRepository.save(order));
     }
 }
