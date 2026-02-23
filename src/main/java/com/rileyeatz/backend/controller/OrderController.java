@@ -1,9 +1,6 @@
 package com.rileyeatz.backend.controller;
 
-import com.rileyeatz.backend.model.CartItem;
-import com.rileyeatz.backend.model.Order;
-import com.rileyeatz.backend.model.OrderStatus;
-import com.rileyeatz.backend.model.User;
+import com.rileyeatz.backend.model.*;
 import com.rileyeatz.backend.repository.CartItemRepository;
 import com.rileyeatz.backend.repository.OrderRepository;
 import com.rileyeatz.backend.repository.UserRepository;
@@ -34,25 +31,63 @@ public class OrderController {
 
     // ✅ CHECKOUT (Create Order from Cart)
     @PostMapping("/checkout")
-    public ResponseEntity<?> checkout() {
+    public ResponseEntity<?> checkout(
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-
-        // 🔒 Prevent crash
-        if (authentication == null ||
-                !authentication.isAuthenticated() ||
-                authentication.getPrincipal().equals("anonymousUser")) {
-
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body("User not authenticated. Please login first.");
+        if (userDetails == null) {
+            return ResponseEntity.status(401)
+                    .body("User not authenticated");
         }
 
-        String username = authentication.getName();
+        // 1️⃣ Get logged-in user
+        User user = userRepository
+                .findByEmail(userDetails.getUsername())
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
 
-        return ResponseEntity.ok("Checkout successful for user: " + username);
+        // 2️⃣ Get cart items
+        List<CartItem> cartItems =
+                cartItemRepository.findByUser(user);
+
+        if (cartItems.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body("Cart is empty");
+        }
+
+        // 3️⃣ Create new order
+        Order order = new Order();
+        order.setUser(user);
+
+        double totalAmount = 0.0;
+        List<OrderItem> orderItems = new java.util.ArrayList<>();
+
+        for (CartItem cartItem : cartItems) {
+
+            OrderItem orderItem = new OrderItem();
+
+            orderItem.setMenuItem(cartItem.getMenuItem()); // ✅ FIXED
+            orderItem.setQuantity(cartItem.getQuantity());
+            orderItem.setPrice(cartItem.getMenuItem().getPrice());
+            orderItem.setOrder(order); // VERY IMPORTANT
+
+            totalAmount += cartItem.getMenuItem().getPrice()
+                    * cartItem.getQuantity();
+
+            orderItems.add(orderItem);
+        }
+
+        order.setTotalAmount(totalAmount);
+        order.setOrderItems(orderItems);
+
+        // 4️⃣ Save order (Cascade saves orderItems)
+        Order savedOrder = orderRepository.save(order);
+
+        // 5️⃣ Clear cart
+        cartItemRepository.deleteAll(cartItems);
+
+        return ResponseEntity.ok(savedOrder);
     }
+
     // ✅ GET ALL ORDERS FOR LOGGED-IN USER
     @GetMapping
     public ResponseEntity<?> getUserOrders(
