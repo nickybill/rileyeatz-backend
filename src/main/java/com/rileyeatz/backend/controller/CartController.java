@@ -4,7 +4,6 @@ import com.rileyeatz.backend.model.*;
 import com.rileyeatz.backend.repository.*;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,18 +26,13 @@ public class CartController {
         this.menuItemRepository = menuItemRepository;
     }
 
-    // ➕ Add to Cart
+    // ➕ Add to Cart (Temporary: hardcoded user)
     @PostMapping("/{menuItemId}")
     public ResponseEntity<?> addToCart(@PathVariable Long menuItemId,
-                                       @RequestParam int quantity,
-                                       Authentication authentication) {
+                                       @RequestParam int quantity) {
 
-        if (authentication == null) {
-            return ResponseEntity.status(401).body("Unauthorized");
-        }
-
-        String email = authentication.getName();
-        User user = userRepository.findByEmail(email)
+        // ⚠️ TEMP: Always use admin user
+        User user = userRepository.findByEmail("admin@gmail.com")
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         MenuItem menuItem = menuItemRepository.findById(menuItemId)
@@ -66,14 +60,9 @@ public class CartController {
 
     // 📥 Get Cart
     @GetMapping
-    public ResponseEntity<?> getCart(Authentication authentication) {
+    public ResponseEntity<?> getCart() {
 
-        if (authentication == null) {
-            return ResponseEntity.status(401).body("Unauthorized");
-        }
-
-        String email = authentication.getName();
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail("admin@gmail.com")
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         List<CartItem> cartItems = cartItemRepository.findByUserId(user.getId());
@@ -84,10 +73,6 @@ public class CartController {
     // ❌ Remove item
     @DeleteMapping("/{cartItemId}")
     public ResponseEntity<?> removeItem(@PathVariable Long cartItemId) {
-
-        if (!cartItemRepository.existsById(cartItemId)) {
-            return ResponseEntity.badRequest().body("Cart item not found");
-        }
 
         cartItemRepository.deleteById(cartItemId);
         return ResponseEntity.ok("Item removed from cart");
