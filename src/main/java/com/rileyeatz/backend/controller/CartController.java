@@ -1,98 +1,44 @@
 package com.rileyeatz.backend.controller;
 
-import com.rileyeatz.backend.model.*;
-import com.rileyeatz.backend.repository.*;
+import com.rileyeatz.backend.model.User;
+import com.rileyeatz.backend.service.CartService;
+import com.rileyeatz.backend.repository.UserRepository;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/cart")
 @CrossOrigin
 public class CartController {
 
-    private final CartItemRepository cartItemRepository;
+    private final CartService cartService;
     private final UserRepository userRepository;
-    private final MenuItemRepository menuItemRepository;
 
-    public CartController(CartItemRepository cartItemRepository,
-                          UserRepository userRepository,
-                          MenuItemRepository menuItemRepository) {
-        this.cartItemRepository = cartItemRepository;
+    public CartController(CartService cartService,
+                          UserRepository userRepository) {
+        this.cartService = cartService;
         this.userRepository = userRepository;
-        this.menuItemRepository = menuItemRepository;
     }
 
-    // ➕ Add to Cart (Temporary: hardcoded user)
     @PostMapping("/{menuItemId}")
-    public ResponseEntity<?> addToCart(@PathVariable Long menuItemId,
-                                       @RequestParam int quantity) {
+    public ResponseEntity<?> addToCart(
+            @PathVariable Long menuItemId,
+            @RequestParam int quantity,
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-        // ⚠️ TEMP: Always use admin user
-        User user = userRepository.findByEmail("admin@gmail.com")
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        MenuItem menuItem = menuItemRepository.findById(menuItemId)
-                .orElseThrow(() -> new RuntimeException("Menu item not found"));
-
-        Optional<CartItem> existing =
-                cartItemRepository.findByUserIdAndMenuItemId(user.getId(), menuItemId);
-
-        if (existing.isPresent()) {
-            CartItem item = existing.get();
-            item.setQuantity(item.getQuantity() + quantity);
-            cartItemRepository.save(item);
-            return ResponseEntity.ok("Quantity updated");
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body("Unauthorized");
         }
 
-        CartItem cartItem = new CartItem();
-        cartItem.setUser(user);
-        cartItem.setMenuItem(menuItem);
-        cartItem.setQuantity(quantity);
+        User user = userRepository
+                .findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        cartItemRepository.save(cartItem);
+        cartService.addToCart(user, menuItemId, quantity);
 
         return ResponseEntity.ok("Item added to cart");
-    }
-
-    // 📥 Get Cart
-    @GetMapping
-    public ResponseEntity<?> getCart() {
-
-        User user = userRepository.findByEmail("admin@gmail.com")
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        List<CartItem> cartItems = cartItemRepository.findByUserId(user.getId());
-
-        return ResponseEntity.ok(cartItems);
-    }
-
-    // ❌ Remove item
-    @DeleteMapping("/{cartItemId}")
-    public ResponseEntity<?> removeItem(@PathVariable Long cartItemId) {
-
-        cartItemRepository.deleteById(cartItemId);
-        return ResponseEntity.ok("Item removed from cart");
-    }
-
-    // 🔄 Update quantity
-    @PutMapping("/{cartItemId}")
-    public ResponseEntity<?> updateQuantity(@PathVariable Long cartItemId,
-                                            @RequestParam int quantity) {
-
-        Optional<CartItem> cartItemOptional = cartItemRepository.findById(cartItemId);
-
-        if (cartItemOptional.isEmpty()) {
-            return ResponseEntity.badRequest().body("Cart item not found");
-        }
-
-        CartItem cartItem = cartItemOptional.get();
-        cartItem.setQuantity(quantity);
-        cartItemRepository.save(cartItem);
-
-        return ResponseEntity.ok("Cart updated");
     }
 }
