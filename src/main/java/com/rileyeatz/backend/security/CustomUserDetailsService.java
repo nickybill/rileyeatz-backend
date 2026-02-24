@@ -1,56 +1,25 @@
 package com.rileyeatz.backend.security;
 
 import com.rileyeatz.backend.model.User;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
+import com.rileyeatz.backend.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.*;
+import org.springframework.stereotype.Service;
 
-import java.util.Collection;
-import java.util.List;
+@Service
+public class CustomUserDetailsService implements UserDetailsService {
 
-public class CustomUserDetails implements UserDetails {
-
-    private final User user;
-
-    public CustomUserDetails(User user) {
-        this.user = user;
-    }
+    @Autowired
+    private UserRepository userRepository;
 
     @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        // 🔥 VERY IMPORTANT
-        return List.of(
-                new SimpleGrantedAuthority("ROLE_" + user.getRole())
-        );
-    }
+    public UserDetails loadUserByUsername(String email)
+            throws UsernameNotFoundException {
 
-    @Override
-    public String getPassword() {
-        return user.getPassword();
-    }
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new UsernameNotFoundException("User not found"));
 
-    @Override
-    public String getUsername() {
-        return user.getEmail(); // since you're using email
-    }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return true;
+        return new CustomUserDetails(user);
     }
 }
