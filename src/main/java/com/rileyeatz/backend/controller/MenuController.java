@@ -4,15 +4,16 @@ import com.rileyeatz.backend.model.MenuItem;
 import com.rileyeatz.backend.model.Restaurant;
 import com.rileyeatz.backend.repository.MenuItemRepository;
 import com.rileyeatz.backend.repository.RestaurantRepository;
+
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/menu")
-@CrossOrigin
 public class MenuController {
 
     private final MenuItemRepository menuItemRepository;
@@ -24,33 +25,36 @@ public class MenuController {
         this.restaurantRepository = restaurantRepository;
     }
 
-    // Add menu item to restaurant
-    @PostMapping("/{restaurantId}")
-    public ResponseEntity<?> addMenuItem(@PathVariable Long restaurantId,
-                                         @RequestBody MenuItem menuItem) {
+    @PostMapping(
+            value = "/{restaurantId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<?> addMenuItem(
+            @PathVariable Long restaurantId,
+            @RequestPart("image") MultipartFile image,
+            @RequestPart("name") String name,
+            @RequestPart("description") String description,
+            @RequestPart("price") Double price
+    ) {
 
-        Optional<Restaurant> restaurantOptional = restaurantRepository.findById(restaurantId);
+        Optional<Restaurant> restaurant =
+                restaurantRepository.findById(restaurantId);
 
-        if (restaurantOptional.isEmpty()) {
-            return ResponseEntity.badRequest().body("Restaurant not found");
+        if (restaurant.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body("Restaurant not found");
         }
 
-        menuItem.setRestaurant(restaurantOptional.get());
+        MenuItem menuItem = new MenuItem();
+        menuItem.setName(name);
+        menuItem.setDescription(description);
+        menuItem.setPrice(price);
+        menuItem.setRestaurant(restaurant.get());
+
+        // TODO: Save image path if needed
+
         menuItemRepository.save(menuItem);
 
         return ResponseEntity.ok("Menu item added successfully");
-    }
-
-    // Get menu by restaurant
-    @GetMapping("/restaurant/{restaurantId}")
-    public ResponseEntity<List<MenuItem>> getMenuByRestaurant(@PathVariable Long restaurantId) {
-        return ResponseEntity.ok(menuItemRepository.findByRestaurantId(restaurantId));
-    }
-
-    // Delete menu item
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteMenuItem(@PathVariable Long id) {
-        menuItemRepository.deleteById(id);
-        return ResponseEntity.ok("Menu item deleted");
     }
 }
