@@ -31,10 +31,10 @@ public class MenuController {
     )
     public ResponseEntity<?> addMenuItem(
             @PathVariable Long restaurantId,
-            @RequestPart("image") MultipartFile image,
-            @RequestPart("name") String name,
-            @RequestPart("description") String description,
-            @RequestPart("price") Double price
+            @RequestParam("image") MultipartFile image,
+            @RequestParam("name") String name,
+            @RequestParam("description") String description,
+            @RequestParam("price") Double price
     ) {
 
         Optional<Restaurant> restaurant =
