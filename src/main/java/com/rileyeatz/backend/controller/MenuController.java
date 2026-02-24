@@ -34,7 +34,7 @@ public class MenuController {
             @RequestParam("image") MultipartFile image,
             @RequestParam("name") String name,
             @RequestParam("description") String description,
-            @RequestParam("price") Double price
+            @RequestParam("price") String price
     ) {
 
         Optional<Restaurant> restaurant =
@@ -48,10 +48,11 @@ public class MenuController {
         MenuItem menuItem = new MenuItem();
         menuItem.setName(name);
         menuItem.setDescription(description);
-        menuItem.setPrice(price);
-        menuItem.setRestaurant(restaurant.get());
 
-        // TODO: Save image path if needed
+        Double parsedPrice = Double.parseDouble(price);
+        menuItem.setPrice(parsedPrice);
+
+        menuItem.setRestaurant(restaurant.get());
 
         menuItemRepository.save(menuItem);
 
