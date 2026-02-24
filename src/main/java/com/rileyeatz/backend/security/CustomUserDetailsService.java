@@ -1,32 +1,56 @@
 package com.rileyeatz.backend.security;
 
 import com.rileyeatz.backend.model.User;
-import com.rileyeatz.backend.repository.UserRepository;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.*;
-import org.springframework.stereotype.Service;
+import java.util.Collection;
+import java.util.List;
 
-import java.util.Collections;
+public class CustomUserDetails implements UserDetails {
 
-@Service
-public class CustomUserDetailsService implements UserDetailsService {
+    private final User user;
 
-    @Autowired
-    private UserRepository userRepository;
+    public CustomUserDetails(User user) {
+        this.user = user;
+    }
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException("User not found with email: " + email)
-                );
-
-        return new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                user.getPassword(),
-                Collections.emptyList() // roles can go here later
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        // 🔥 VERY IMPORTANT
+        return List.of(
+                new SimpleGrantedAuthority("ROLE_" + user.getRole())
         );
+    }
+
+    @Override
+    public String getPassword() {
+        return user.getPassword();
+    }
+
+    @Override
+    public String getUsername() {
+        return user.getEmail(); // since you're using email
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return true;
     }
 }
