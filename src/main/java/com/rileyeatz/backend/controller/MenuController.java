@@ -37,6 +37,7 @@ public class MenuController {
             @RequestParam("price") String price
     ) {
 
+        // ✅ Check if restaurant exists
         Optional<Restaurant> restaurant =
                 restaurantRepository.findById(restaurantId);
 
@@ -45,17 +46,26 @@ public class MenuController {
                     .body("Restaurant not found");
         }
 
+        // ✅ Parse price safely (CHANGED - added try/catch)
+        Double parsedPrice;
+        try {
+            parsedPrice = Double.parseDouble(price);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest()
+                    .body("Invalid price format");
+        }
+
+        // ✅ Create menu item
         MenuItem menuItem = new MenuItem();
         menuItem.setName(name);
         menuItem.setDescription(description);
-
-        Double parsedPrice = Double.parseDouble(price);
         menuItem.setPrice(parsedPrice);
-
         menuItem.setRestaurant(restaurant.get());
 
-        menuItemRepository.save(menuItem);
+        // ✅ CHANGED: Store returned saved object
+        MenuItem savedMenuItem = menuItemRepository.save(menuItem);
 
-        return ResponseEntity.ok("Menu item added successfully");
+        // ✅ CHANGED: Return JSON object instead of String
+        return ResponseEntity.ok(savedMenuItem);
     }
 }
