@@ -1,9 +1,9 @@
 package com.rileyeatz.backend.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 @Entity
-@Table(name = "menu_items")
 public class MenuItem {
 
     @Id
@@ -11,40 +11,51 @@ public class MenuItem {
     private Long id;
 
     private String name;
-
     private String description;
-
     private Double price;
 
-    private String imageUrl;
-
     @ManyToOne
+    @JsonIgnore   // prevents infinite JSON loop
     @JoinColumn(name = "restaurant_id")
     private Restaurant restaurant;
 
-    // Getters and Setters
+    // ===== GETTERS =====
 
-    public Long getId() { return id; }
+    public Long getId() {
+        return id;
+    }
 
-    public void setId(Long id) { this.id = id; }
+    public String getName() {
+        return name;
+    }
 
-    public String getName() { return name; }
+    public String getDescription() {
+        return description;
+    }
 
-    public void setName(String name) { this.name = name; }
+    public Double getPrice() {
+        return price;
+    }
 
-    public String getDescription() { return description; }
+    public Restaurant getRestaurant() {
+        return restaurant;
+    }
 
-    public void setDescription(String description) { this.description = description; }
+    // ===== SETTERS =====
 
-    public Double getPrice() { return price; }
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    public void setPrice(Double price) { this.price = price; }
+    public void setDescription(String description) {
+        this.description = description;
+    }
 
-    public String getImageUrl() { return imageUrl; }
+    public void setPrice(Double price) {
+        this.price = price;
+    }
 
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-
-    public Restaurant getRestaurant() { return restaurant; }
-
-    public void setRestaurant(Restaurant restaurant) { this.restaurant = restaurant; }
+    public void setRestaurant(Restaurant restaurant) {
+        this.restaurant = restaurant;
+    }
 }
