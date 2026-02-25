@@ -10,10 +10,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/menu")
+@CrossOrigin(origins = "*")   // ✅ allows Android to access backend
 public class MenuController {
 
     private final MenuItemRepository menuItemRepository;
@@ -25,6 +27,7 @@ public class MenuController {
         this.restaurantRepository = restaurantRepository;
     }
 
+    // ✅ 1️⃣ ADD MENU ITEM (POST)
     @PostMapping(
             value = "/{restaurantId}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -37,7 +40,6 @@ public class MenuController {
             @RequestParam("price") String price
     ) {
 
-        // ✅ Check if restaurant exists
         Optional<Restaurant> restaurant =
                 restaurantRepository.findById(restaurantId);
 
@@ -46,7 +48,6 @@ public class MenuController {
                     .body("Restaurant not found");
         }
 
-        // ✅ Parse price safely (CHANGED - added try/catch)
         Double parsedPrice;
         try {
             parsedPrice = Double.parseDouble(price);
@@ -55,17 +56,33 @@ public class MenuController {
                     .body("Invalid price format");
         }
 
-        // ✅ Create menu item
         MenuItem menuItem = new MenuItem();
         menuItem.setName(name);
         menuItem.setDescription(description);
         menuItem.setPrice(parsedPrice);
         menuItem.setRestaurant(restaurant.get());
 
-        // ✅ CHANGED: Store returned saved object
         MenuItem savedMenuItem = menuItemRepository.save(menuItem);
 
-        // ✅ CHANGED: Return JSON object instead of String
         return ResponseEntity.ok(savedMenuItem);
+    }
+
+
+    // ✅ 2️⃣ GET MENU ITEMS (NEW - FIXES YOUR 405 ERROR)
+    @GetMapping("/{restaurantId}")
+    public ResponseEntity<?> getMenuItems(@PathVariable Long restaurantId) {
+
+        Optional<Restaurant> restaurant =
+                restaurantRepository.findById(restaurantId);
+
+        if (restaurant.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body("Restaurant not found");
+        }
+
+        List<MenuItem> menuItems =
+                menuItemRepository.findByRestaurantId(restaurantId);
+
+        return ResponseEntity.ok(menuItems);
     }
 }
