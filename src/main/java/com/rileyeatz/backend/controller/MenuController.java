@@ -25,14 +25,14 @@ public class MenuController {
 
     private final MenuItemRepository menuItemRepository;
     private final RestaurantRepository restaurantRepository;
-    private final Cloudinary cloudinary;   // ✅ added
+    private final Cloudinary cloudinary;
 
     public MenuController(MenuItemRepository menuItemRepository,
                           RestaurantRepository restaurantRepository,
-                          Cloudinary cloudinary) {   // ✅ added
+                          Cloudinary cloudinary) {
         this.menuItemRepository = menuItemRepository;
         this.restaurantRepository = restaurantRepository;
-        this.cloudinary = cloudinary;   // ✅ added
+        this.cloudinary = cloudinary;
     }
 
     // ✅ 1️⃣ ADD MENU ITEM (POST)
@@ -65,8 +65,7 @@ public class MenuController {
         }
 
         try {
-
-            // ✅ YOUR EXACT CLOUDINARY CODE ADDED HERE
+            // Upload image to Cloudinary
             Map uploadResult = cloudinary.uploader().upload(
                     image.getBytes(),
                     ObjectUtils.emptyMap()
@@ -80,7 +79,7 @@ public class MenuController {
             menuItem.setPrice(parsedPrice);
             menuItem.setRestaurant(restaurant.get());
 
-            menuItem.setImageUrl(imageUrl);   // ✅ saves Cloudinary URL
+            menuItem.setImageUrl(imageUrl);
 
             MenuItem savedMenuItem = menuItemRepository.save(menuItem);
 
@@ -108,5 +107,60 @@ public class MenuController {
                 menuItemRepository.findByRestaurantId(restaurantId);
 
         return ResponseEntity.ok(menuItems);
+    }
+
+    // ✅ 3️⃣ DELETE MENU ITEM
+    @DeleteMapping("/{menuItemId}")
+    public ResponseEntity<?> deleteMenuItem(@PathVariable Long menuItemId) {
+
+        Optional<MenuItem> menuItem = menuItemRepository.findById(menuItemId);
+
+        if (menuItem.isEmpty()) {
+            return ResponseEntity.badRequest().body("Menu item not found");
+        }
+
+        menuItemRepository.deleteById(menuItemId);
+
+        return ResponseEntity.ok("Menu item deleted successfully");
+    }
+
+    // ✅ 4️⃣ UPDATE MENU ITEM (PUT)
+    @PutMapping(value = "/{menuItemId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateMenuItem(
+            @PathVariable Long menuItemId,
+            @RequestParam(value = "image", required = false) MultipartFile image,
+            @RequestParam("name") String name,
+            @RequestParam("description") String description,
+            @RequestParam("price") String price
+    ) {
+
+        Optional<MenuItem> optionalItem = menuItemRepository.findById(menuItemId);
+
+        if (optionalItem.isEmpty()) {
+            return ResponseEntity.badRequest().body("Menu item not found");
+        }
+
+        MenuItem menuItem = optionalItem.get();
+        menuItem.setName(name);
+        menuItem.setDescription(description);
+        menuItem.setPrice(Double.parseDouble(price));
+
+        // If new image uploaded → update Cloudinary
+        if (image != null && !image.isEmpty()) {
+            try {
+                Map uploadResult = cloudinary.uploader().upload(
+                        image.getBytes(),
+                        ObjectUtils.emptyMap()
+                );
+                String imageUrl = uploadResult.get("secure_url").toString();
+                menuItem.setImageUrl(imageUrl);
+            } catch (Exception e) {
+                return ResponseEntity.internalServerError().body("Image upload failed");
+            }
+        }
+
+        menuItemRepository.save(menuItem);
+
+        return ResponseEntity.ok(menuItem);
     }
 }
