@@ -3,10 +3,14 @@ package com.rileyeatz.backend.controller;
 import com.rileyeatz.backend.model.Admin;
 import com.rileyeatz.backend.payload.PasswordChangeRequest;
 import com.rileyeatz.backend.repository.AdminRepository;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 
@@ -18,7 +22,10 @@ public class AdminController {
     @Autowired
     private AdminRepository adminRepository;
 
-    // ===== Dashboard (existing) =====
+    @Autowired
+    private Cloudinary cloudinary;
+
+    // ===== Dashboard =====
     @GetMapping("/dashboard")
     public Map<String, Integer> getDashboardStats() {
         Map<String, Integer> stats = new HashMap<>();
@@ -29,47 +36,89 @@ public class AdminController {
         return stats;
     }
 
-    // ===== Get Admin Profile =====
-    @GetMapping("/profile")
-    public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String token) {
-        // For simplicity, fetch the first admin
-        Admin admin = adminRepository.findById(1L).orElse(null);
-        if (admin == null) {
-            return ResponseEntity.badRequest().body("Admin not found");
-        }
+    // ===== Get Admin Profile by ID =====
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getAdminById(@PathVariable Long id) {
+        Admin admin = adminRepository.findById(id).orElse(null);
+        if (admin == null) return ResponseEntity.badRequest().body("Admin not found");
         return ResponseEntity.ok(admin);
     }
 
-    // ===== Update Admin Profile =====
-    @PutMapping("/profile")
-    public ResponseEntity<?> updateProfile(
-            @RequestHeader("Authorization") String token,
-            @RequestBody Admin updatedAdmin) {
+    // ===== List All Admins =====
+    @GetMapping("/")
+    public ResponseEntity<List<Admin>> getAllAdmins() {
+        return ResponseEntity.ok(adminRepository.findAll());
+    }
 
-        Admin admin = adminRepository.findById(1L).orElse(null);
-        if (admin == null) {
+    // ===== Create Admin =====
+    @PostMapping("/")
+    public ResponseEntity<Admin> createAdmin(@RequestBody Admin newAdmin) {
+        return ResponseEntity.ok(adminRepository.save(newAdmin));
+    }
+
+    // ===== Delete Admin =====
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteAdmin(@PathVariable Long id) {
+        if (!adminRepository.existsById(id)) {
             return ResponseEntity.badRequest().body("Admin not found");
         }
+        adminRepository.deleteById(id);
+        return ResponseEntity.ok("Admin deleted successfully");
+    }
+
+    // ===== Update Admin Profile (Text Only JSON) =====
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateAdminProfile(
+            @PathVariable Long id,
+            @RequestBody Admin updatedAdmin) {
+
+        Admin admin = adminRepository.findById(id).orElse(null);
+        if (admin == null) return ResponseEntity.badRequest().body("Admin not found");
 
         admin.setName(updatedAdmin.getName());
         admin.setEmail(updatedAdmin.getEmail());
         admin.setPhone(updatedAdmin.getPhone());
 
         adminRepository.save(admin);
+        return ResponseEntity.ok(admin);
+    }
 
+    // ===== Update Admin Profile with Image (Multipart) =====
+    @PutMapping(value = "/{id}/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateAdminProfileWithImage(
+            @PathVariable Long id,
+            @RequestParam("name") String name,
+            @RequestParam("email") String email,
+            @RequestParam(value = "image", required = false) MultipartFile image) {
+
+        Admin admin = adminRepository.findById(id).orElse(null);
+        if (admin == null) return ResponseEntity.badRequest().body("Admin not found");
+
+        admin.setName(name);
+        admin.setEmail(email);
+
+        if (image != null && !image.isEmpty()) {
+            try {
+                Map uploadResult = cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap());
+                String imageUrl = uploadResult.get("secure_url").toString();
+                admin.setImageUrl(imageUrl);
+            } catch (Exception e) {
+                return ResponseEntity.internalServerError().body("Image upload failed: " + e.getMessage());
+            }
+        }
+
+        adminRepository.save(admin);
         return ResponseEntity.ok(admin);
     }
 
     // ===== Change Password =====
-    @PutMapping("/change-password")
+    @PutMapping("/{id}/change-password")
     public ResponseEntity<?> changePassword(
-            @RequestHeader("Authorization") String token,
+            @PathVariable Long id,
             @RequestBody PasswordChangeRequest request) {
 
-        Admin admin = adminRepository.findById(1L).orElse(null);
-        if (admin == null) {
-            return ResponseEntity.badRequest().body("Admin not found");
-        }
+        Admin admin = adminRepository.findById(id).orElse(null);
+        if (admin == null) return ResponseEntity.badRequest().body("Admin not found");
 
         if (!admin.getPassword().equals(request.getCurrentPassword())) {
             return ResponseEntity.badRequest().body("Current password is incorrect");
