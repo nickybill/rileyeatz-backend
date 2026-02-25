@@ -14,6 +14,8 @@ public class MenuItem {
     private String description;
     private Double price;
 
+    private String imageUrl;   // ✅ ADDED FIELD
+
     @ManyToOne
     @JsonIgnore   // prevents infinite JSON loop
     @JoinColumn(name = "restaurant_id")
@@ -37,6 +39,10 @@ public class MenuItem {
         return price;
     }
 
+    public String getImageUrl() {   // ✅ ADDED GETTER
+        return imageUrl;
+    }
+
     public Restaurant getRestaurant() {
         return restaurant;
     }
@@ -53,6 +59,10 @@ public class MenuItem {
 
     public void setPrice(Double price) {
         this.price = price;
+    }
+
+    public void setImageUrl(String imageUrl) {   // ✅ ADDED SETTER
+        this.imageUrl = imageUrl;
     }
 
     public void setRestaurant(Restaurant restaurant) {
