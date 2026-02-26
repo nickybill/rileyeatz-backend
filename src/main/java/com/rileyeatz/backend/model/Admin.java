@@ -15,7 +15,6 @@ public class Admin {
     private String phone;
     private String imageUrl;
 
-    // Bidirectional link to Restaurant
     @OneToOne(mappedBy = "admin")
     private Restaurant restaurant;
 
