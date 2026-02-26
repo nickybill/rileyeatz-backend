@@ -1,6 +1,7 @@
 package com.rileyeatz.backend.model;
 
 import jakarta.persistence.*;
+import java.util.UUID;
 
 @Entity
 public class Admin {
@@ -15,7 +16,9 @@ public class Admin {
     private String phone;
     private String imageUrl;
 
-    @OneToOne(mappedBy = "admin")
+    // ===== Owning side of the relationship =====
+    @OneToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "restaurant_id") // FK in Admin table
     private Restaurant restaurant;
 
     // ===== Getters & Setters =====

@@ -32,15 +32,23 @@ public class AuthController {
         Optional<Admin> adminOpt = adminRepository.findByEmail(request.getEmail());
         if (adminOpt.isPresent()) {
             Admin admin = adminOpt.get();
+
             if (passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
                 String token = jwtUtil.generateToken(admin.getEmail());
-                Long restaurantId = (admin.getRestaurant() != null) ? admin.getRestaurant().getId() : null;
+
+                // Return restaurantId as String (UUID)
+                String restaurantId = (admin.getRestaurant() != null)
+                        ? admin.getRestaurant().getId().toString()
+                        : null;
+
                 return ResponseEntity.ok(new LoginResponse(token, restaurantId));
             } else {
-                return ResponseEntity.badRequest().body(new LoginResponse("Invalid email or password"));
+                return ResponseEntity.badRequest()
+                        .body(new LoginResponse("Invalid email or password", null));
             }
         }
 
-        return ResponseEntity.badRequest().body(new LoginResponse("Invalid email or password"));
+        return ResponseEntity.badRequest()
+                .body(new LoginResponse("Invalid email or password", null));
     }
 }
