@@ -28,7 +28,9 @@ public class MenuController {
     public ResponseEntity<?> addMenuItem(@RequestHeader("Authorization") String token,
                                          @RequestBody MenuItem item) {
         String adminEmail = jwtUtil.extractUsername(token.replace("Bearer ", ""));
-        Admin admin = adminRepository.findByEmail(adminEmail)
+
+        // Use the updated repository method
+        Admin admin = adminRepository.findByEmailWithRestaurant(adminEmail)
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
 
         Restaurant restaurant = admin.getRestaurant();

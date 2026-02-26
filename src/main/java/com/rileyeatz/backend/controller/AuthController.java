@@ -29,16 +29,17 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
 
-        // Use the new repository method that fetches the restaurant
+        // Use the repository method that fetches the restaurant eagerly
         Optional<Admin> adminOpt = adminRepository.findByEmailWithRestaurant(request.getEmail());
 
         if (adminOpt.isPresent()) {
             Admin admin = adminOpt.get();
 
+            // Verify password
             if (passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
                 String token = jwtUtil.generateToken(admin.getEmail());
 
-                // Get restaurantId as UUID string if available
+                // Return restaurantId as String (UUID) if available
                 String restaurantId = (admin.getRestaurant() != null)
                         ? admin.getRestaurant().getId().toString()
                         : null;
