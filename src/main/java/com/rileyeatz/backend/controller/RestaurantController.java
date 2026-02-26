@@ -31,13 +31,11 @@ public class RestaurantController {
     @Autowired
     private Cloudinary cloudinary;
 
-    // ===== GET ALL =====
     @GetMapping
     public ResponseEntity<List<Restaurant>> getAllRestaurants() {
         return ResponseEntity.ok(restaurantRepository.findAll());
     }
 
-    // ===== GET BY ID =====
     @GetMapping("/{id}")
     public ResponseEntity<?> getRestaurantById(@PathVariable UUID id) {
         Optional<Restaurant> restaurant = restaurantRepository.findById(id);
@@ -45,7 +43,6 @@ public class RestaurantController {
         return ResponseEntity.ok(restaurant.get());
     }
 
-    // ===== CREATE =====
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createRestaurant(
             @RequestParam("name") String name,
@@ -59,7 +56,6 @@ public class RestaurantController {
         restaurant.setAddress(address);
         restaurant.setPhone(phone);
 
-        // Image upload
         if (image != null && !image.isEmpty()) {
             try {
                 String imageUrl = cloudinary.uploader()
@@ -71,21 +67,18 @@ public class RestaurantController {
             }
         }
 
-        // Link admin if provided
+        restaurantRepository.save(restaurant);
+
         if (adminId != null) {
             Admin admin = adminRepository.findById(adminId).orElse(null);
             if (admin == null) return ResponseEntity.badRequest().body("Admin not found");
-
-            // Admin owns the relationship
             admin.setRestaurant(restaurant);
             adminRepository.save(admin);
         }
 
-        restaurantRepository.save(restaurant);
         return ResponseEntity.ok("Restaurant created successfully");
     }
 
-    // ===== UPDATE =====
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateRestaurant(
             @PathVariable UUID id,
@@ -114,27 +107,25 @@ public class RestaurantController {
             }
         }
 
-        // Link admin if provided
+        restaurantRepository.save(restaurant);
+
         if (adminId != null) {
             Admin admin = adminRepository.findById(adminId).orElse(null);
             if (admin == null) return ResponseEntity.badRequest().body("Admin not found");
-
-            // Admin owns the relationship
             admin.setRestaurant(restaurant);
             adminRepository.save(admin);
         }
 
-        restaurantRepository.save(restaurant);
         return ResponseEntity.ok("Restaurant updated successfully");
     }
 
-    // ===== DELETE =====
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteRestaurant(@PathVariable UUID id) {
-        if (!restaurantRepository.existsById(id)) return ResponseEntity.badRequest().body("Restaurant not found");
+        Optional<Restaurant> restaurantOptional = restaurantRepository.findById(id);
+        if (restaurantOptional.isEmpty()) return ResponseEntity.badRequest().body("Restaurant not found");
 
-        // Remove link from admin if exists
-        Restaurant restaurant = restaurantRepository.findById(id).get();
+        Restaurant restaurant = restaurantOptional.get();
+
         Admin admin = restaurant.getAdmin();
         if (admin != null) {
             admin.setRestaurant(null);

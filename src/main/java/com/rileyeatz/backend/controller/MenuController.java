@@ -1,10 +1,10 @@
 package com.rileyeatz.backend.controller;
 
+import com.rileyeatz.backend.model.Restaurant;
 import com.rileyeatz.backend.model.Admin;
 import com.rileyeatz.backend.model.MenuItem;
-import com.rileyeatz.backend.model.Restaurant;
-import com.rileyeatz.backend.repository.AdminRepository;
 import com.rileyeatz.backend.repository.MenuItemRepository;
+import com.rileyeatz.backend.repository.AdminRepository;
 import com.rileyeatz.backend.security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -28,8 +28,6 @@ public class MenuController {
     public ResponseEntity<?> addMenuItem(@RequestHeader("Authorization") String token,
                                          @RequestBody MenuItem item) {
         String adminEmail = jwtUtil.extractUsername(token.replace("Bearer ", ""));
-
-        // Use the updated repository method
         Admin admin = adminRepository.findByEmailWithRestaurant(adminEmail)
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
 

@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface RestaurantRepository extends JpaRepository<Restaurant, Long> {
     Optional<Restaurant> findById(UUID id);
+
+    void deleteById(UUID id);
 }
