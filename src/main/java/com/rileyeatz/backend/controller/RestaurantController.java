@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/restaurants")
@@ -33,17 +34,14 @@ public class RestaurantController {
     // ===== GET ALL =====
     @GetMapping
     public ResponseEntity<List<Restaurant>> getAllRestaurants() {
-        List<Restaurant> restaurants = restaurantRepository.findAll();
-        return ResponseEntity.ok(restaurants);
+        return ResponseEntity.ok(restaurantRepository.findAll());
     }
 
     // ===== GET BY ID =====
     @GetMapping("/{id}")
-    public ResponseEntity<?> getRestaurantById(@PathVariable Long id) {
+    public ResponseEntity<?> getRestaurantById(@PathVariable UUID id) {
         Optional<Restaurant> restaurant = restaurantRepository.findById(id);
-        if (restaurant.isEmpty()) {
-            return ResponseEntity.badRequest().body("Restaurant not found");
-        }
+        if (restaurant.isEmpty()) return ResponseEntity.badRequest().body("Restaurant not found");
         return ResponseEntity.ok(restaurant.get());
     }
 
@@ -73,12 +71,14 @@ public class RestaurantController {
             }
         }
 
-        // Optional admin linking
+        // Link admin if provided
         if (adminId != null) {
             Admin admin = adminRepository.findById(adminId).orElse(null);
             if (admin == null) return ResponseEntity.badRequest().body("Admin not found");
-            restaurant.setAdmin(admin);
+
+            // Admin owns the relationship
             admin.setRestaurant(restaurant);
+            adminRepository.save(admin);
         }
 
         restaurantRepository.save(restaurant);
@@ -88,7 +88,7 @@ public class RestaurantController {
     // ===== UPDATE =====
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateRestaurant(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @RequestParam("name") String name,
             @RequestParam("address") String address,
             @RequestParam("phone") String phone,
@@ -96,9 +96,7 @@ public class RestaurantController {
             @RequestParam(value = "adminId", required = false) Long adminId
     ) {
         Optional<Restaurant> restaurantOptional = restaurantRepository.findById(id);
-        if (restaurantOptional.isEmpty()) {
-            return ResponseEntity.badRequest().body("Restaurant not found");
-        }
+        if (restaurantOptional.isEmpty()) return ResponseEntity.badRequest().body("Restaurant not found");
 
         Restaurant restaurant = restaurantOptional.get();
         restaurant.setName(name);
@@ -116,11 +114,14 @@ public class RestaurantController {
             }
         }
 
+        // Link admin if provided
         if (adminId != null) {
             Admin admin = adminRepository.findById(adminId).orElse(null);
             if (admin == null) return ResponseEntity.badRequest().body("Admin not found");
-            restaurant.setAdmin(admin);
+
+            // Admin owns the relationship
             admin.setRestaurant(restaurant);
+            adminRepository.save(admin);
         }
 
         restaurantRepository.save(restaurant);
@@ -129,10 +130,17 @@ public class RestaurantController {
 
     // ===== DELETE =====
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteRestaurant(@PathVariable Long id) {
-        if (!restaurantRepository.existsById(id)) {
-            return ResponseEntity.badRequest().body("Restaurant not found");
+    public ResponseEntity<?> deleteRestaurant(@PathVariable UUID id) {
+        if (!restaurantRepository.existsById(id)) return ResponseEntity.badRequest().body("Restaurant not found");
+
+        // Remove link from admin if exists
+        Restaurant restaurant = restaurantRepository.findById(id).get();
+        Admin admin = restaurant.getAdmin();
+        if (admin != null) {
+            admin.setRestaurant(null);
+            adminRepository.save(admin);
         }
+
         restaurantRepository.deleteById(id);
         return ResponseEntity.ok("Restaurant deleted successfully");
     }
