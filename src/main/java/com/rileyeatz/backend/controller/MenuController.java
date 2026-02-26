@@ -1,7 +1,6 @@
 package com.rileyeatz.backend.controller;
 
 import com.rileyeatz.backend.model.MenuItem;
-import com.rileyeatz.backend.model.Restaurant;
 import com.rileyeatz.backend.repository.MenuItemRepository;
 import com.rileyeatz.backend.repository.RestaurantRepository;
 

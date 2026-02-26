@@ -1,6 +1,6 @@
 package com.rileyeatz.backend.repository;
 
-import com.rileyeatz.backend.model.Restaurant;
+import com.rileyeatz.backend.model.Restaurant; // ✅ import your model
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
