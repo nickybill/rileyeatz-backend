@@ -1,9 +1,11 @@
 package com.rileyeatz.backend.controller;
 
+import com.rileyeatz.backend.model.Admin;               // needed for Admin
+import com.rileyeatz.backend.model.User;
 import com.rileyeatz.backend.dto.RegisterRequest;
 import com.rileyeatz.backend.dto.LoginRequest;
 import com.rileyeatz.backend.dto.LoginResponse;
-import com.rileyeatz.backend.model.User;
+import com.rileyeatz.backend.repository.AdminRepository; // add this import
 import com.rileyeatz.backend.repository.UserRepository;
 import com.rileyeatz.backend.security.JwtUtil;
 
@@ -21,6 +23,9 @@ public class AuthController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AdminRepository adminRepository; // inject the repository
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -56,34 +61,37 @@ public class AuthController {
     }
 
     // ================= LOGIN =================
-    @PostMapping(
-            value = "/login",
-            consumes = "application/json",
-            produces = "application/json"
-    )
+    @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
 
-        Optional<User> userOptional =
-                userRepository.findByEmail(request.getEmail());
-
-        if (userOptional.isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body(new LoginResponse("Invalid email or password"));
+        // First check Admins
+        Optional<Admin> adminOpt = adminRepository.findByEmail(request.getEmail());
+        if (adminOpt.isPresent()) {
+            Admin admin = adminOpt.get();
+            if (passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
+                String token = jwtUtil.generateToken(admin.getEmail());
+                return ResponseEntity.ok(new LoginResponse(token));
+            } else {
+                return ResponseEntity.badRequest()
+                        .body(new LoginResponse("Invalid email or password"));
+            }
         }
 
-        User user = userOptional.get();
-
-        if (!passwordEncoder.matches(
-                request.getPassword(),
-                user.getPassword())) {
-
-            return ResponseEntity.badRequest()
-                    .body(new LoginResponse("Invalid email or password"));
+        // Then check normal Users
+        Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                String token = jwtUtil.generateToken(user.getEmail());
+                return ResponseEntity.ok(new LoginResponse(token));
+            } else {
+                return ResponseEntity.badRequest()
+                        .body(new LoginResponse("Invalid email or password"));
+            }
         }
 
-        // Generate JWT token using email
-        String token = jwtUtil.generateToken(user.getEmail());
-
-        return ResponseEntity.ok(new LoginResponse(token));
+        // Not found
+        return ResponseEntity.badRequest()
+                .body(new LoginResponse("Invalid email or password"));
     }
 }
