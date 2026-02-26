@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.rileyeatz.backend.model.Restaurant;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
