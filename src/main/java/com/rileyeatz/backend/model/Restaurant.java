@@ -1,7 +1,6 @@
 package com.rileyeatz.backend.model;
 
 import jakarta.persistence.*;
-
 import java.util.UUID;
 
 @Entity
@@ -16,8 +15,7 @@ public class Restaurant {
     private String phone;
     private String imageUrl;
 
-    @OneToOne
-    @JoinColumn(name = "admin_id")
+    @OneToOne(mappedBy = "restaurant")
     private Admin admin;
 
     // ===== Getters & Setters =====

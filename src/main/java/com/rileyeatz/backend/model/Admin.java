@@ -13,9 +13,9 @@ public class Admin {
     private String email;
     private String password;
     private String phone;
-    private String imageUrl;
 
-    @OneToOne(mappedBy = "admin")
+    @OneToOne
+    @JoinColumn(name = "restaurant_id", referencedColumnName = "id")
     private Restaurant restaurant;
 
     // ===== Getters & Setters =====
@@ -28,8 +28,6 @@ public class Admin {
     public void setPassword(String password) { this.password = password; }
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
     public Restaurant getRestaurant() { return restaurant; }
     public void setRestaurant(Restaurant restaurant) { this.restaurant = restaurant; }
 }

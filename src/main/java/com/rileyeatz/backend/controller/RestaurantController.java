@@ -6,7 +6,6 @@ import com.rileyeatz.backend.repository.RestaurantRepository;
 import com.rileyeatz.backend.repository.AdminRepository;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -58,24 +57,23 @@ public class RestaurantController {
 
         if (image != null && !image.isEmpty()) {
             try {
-                String imageUrl = cloudinary.uploader()
-                        .upload(image.getBytes(), ObjectUtils.emptyMap())
-                        .get("secure_url").toString();
-                restaurant.setImageUrl(imageUrl);
+                restaurant.setImageUrl(
+                        cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap())
+                                .get("secure_url").toString()
+                );
             } catch (Exception e) {
                 return ResponseEntity.internalServerError().body("Image upload failed: " + e.getMessage());
             }
         }
 
-        restaurantRepository.save(restaurant);
-
         if (adminId != null) {
             Admin admin = adminRepository.findById(adminId).orElse(null);
             if (admin == null) return ResponseEntity.badRequest().body("Admin not found");
+            restaurant.setAdmin(admin);
             admin.setRestaurant(restaurant);
-            adminRepository.save(admin);
         }
 
+        restaurantRepository.save(restaurant);
         return ResponseEntity.ok("Restaurant created successfully");
     }
 
@@ -98,40 +96,29 @@ public class RestaurantController {
 
         if (image != null && !image.isEmpty()) {
             try {
-                String imageUrl = cloudinary.uploader()
-                        .upload(image.getBytes(), ObjectUtils.emptyMap())
-                        .get("secure_url").toString();
-                restaurant.setImageUrl(imageUrl);
+                restaurant.setImageUrl(
+                        cloudinary.uploader().upload(image.getBytes(), ObjectUtils.emptyMap())
+                                .get("secure_url").toString()
+                );
             } catch (Exception e) {
                 return ResponseEntity.internalServerError().body("Image upload failed: " + e.getMessage());
             }
         }
 
-        restaurantRepository.save(restaurant);
-
         if (adminId != null) {
             Admin admin = adminRepository.findById(adminId).orElse(null);
             if (admin == null) return ResponseEntity.badRequest().body("Admin not found");
+            restaurant.setAdmin(admin);
             admin.setRestaurant(restaurant);
-            adminRepository.save(admin);
         }
 
+        restaurantRepository.save(restaurant);
         return ResponseEntity.ok("Restaurant updated successfully");
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteRestaurant(@PathVariable UUID id) {
-        Optional<Restaurant> restaurantOptional = restaurantRepository.findById(id);
-        if (restaurantOptional.isEmpty()) return ResponseEntity.badRequest().body("Restaurant not found");
-
-        Restaurant restaurant = restaurantOptional.get();
-
-        Admin admin = restaurant.getAdmin();
-        if (admin != null) {
-            admin.setRestaurant(null);
-            adminRepository.save(admin);
-        }
-
+        if (!restaurantRepository.existsById(id)) return ResponseEntity.badRequest().body("Restaurant not found");
         restaurantRepository.deleteById(id);
         return ResponseEntity.ok("Restaurant deleted successfully");
     }
